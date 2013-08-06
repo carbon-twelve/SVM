@@ -18,8 +18,8 @@ let perceptron (trainingSet: TrainingData seq) (learningRate: float) (exampleDim
             Seq.map (fun (d: TrainingData) -> Vector.norm d.example) trainingSet
             |> Seq.max
         r * r
-    let rec loop (p : HyperPlane) : HyperPlane =
-        let update (p : HyperPlane) (d: TrainingData) : HyperPlane =
+    let rec loop (p: HyperPlane) : HyperPlane =
+        let update (p: HyperPlane) (d: TrainingData) : HyperPlane =
             let fails (p: HyperPlane) (d: TrainingData) : bool =
                 (float) d.label * (Vector.dot p.weight d.example + p.bias) <= 0.
             if fails p d then
@@ -63,7 +63,7 @@ let getTrainingSetFromCsv (path: string) : TrainingData list =
     |> List.ofSeq
 
 [<EntryPoint>]
-let main argv =
+let main argv = 
     let trainingSet: TrainingData list = getTrainingSetFromCsv trainingSetFilePath
     let p: HyperPlane = perceptron trainingSet 0.01 2
     printf "weight = %A, bias = %f\n" p.weight p.bias
