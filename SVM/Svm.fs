@@ -1,7 +1,13 @@
-﻿open System
+﻿module Svm
+
+open System
 open System.Text
 open Microsoft.VisualBasic.FileIO
 open FSharpx.Prelude
+open ILNumerics;
+open ILNumerics.Drawing;
+open ILNumerics.Drawing.Plotting;
+
 
 let undefined () = System.NotImplementedException() |> raise
 
@@ -11,6 +17,12 @@ type TrainingData = {
 }
 
 type Classifier = vector -> int
+type HyperPlane = vector -> float
+
+type DrawObject = {
+   Data: ILArray<float>
+   HyperPlane: ILArray<float>
+}
 
 let eps = 1e-5
 let floatEquals (x: float) (y: float): bool = Math.Abs(x - y) < eps
@@ -18,7 +30,7 @@ let convergenceEps = 0.1
 let floatConverges (x: float) (y: float): bool = Math.Abs(x - y) < convergenceEps
 
 // 最急降下法による1-ノルムソフトマージンSVM
-let oneNormMarginSteepestAscent (trainingSet: TrainingData seq) (kernel: vector -> vector -> float) (boxConstraint: float): Classifier =
+let oneNormMarginSteepestAscent (trainingSet: TrainingData seq) (kernel: vector -> vector -> float) (boxConstraint: float): HyperPlane =
     let r: float = Seq.map (fun d -> Vector.norm d.Example) trainingSet |> Seq.max
     // バイアスを0とするために入力ベクトルを拡張する
     let extendedTrainingSet: (TrainingData * int) seq =
@@ -54,9 +66,8 @@ let oneNormMarginSteepestAscent (trainingSet: TrainingData seq) (kernel: vector 
         if converges then dual else iterative dual
     let l: int = Seq.length extendedTrainingSet
     let dual: vector = iterative (Vector.zero l)
-    let classifier (x: vector): int =
-        if f dual x >= 0. then 1 else -1
-    classifier
+    let hyperPlane =  f dual
+    hyperPlane
 
 let getTrainingSetFromCsv (path: string) : TrainingData list =
     use parser: TextFieldParser =
@@ -79,13 +90,16 @@ let getTrainingSetFromCsv (path: string) : TrainingData list =
 
 let datasetPath = @"..\..\..\dataset\haberman.data"
 
-[<EntryPoint>]
-let main argv =
+let convertData data: ILArray<float> = undefined()
+let convertHyperPlane hyperPlane: ILArray<float> = undefined()
+    
+let drawObject (): DrawObject =
     let dataSet = getTrainingSetFromCsv datasetPath
     let trainingSet = Seq.take 200 dataSet
     let testSet = Seq.skip 200 dataSet
     let start = DateTime.Now
-    let classifier = oneNormMarginSteepestAscent trainingSet Vector.dot 1e-4
+    let hyperPlane = oneNormMarginSteepestAscent trainingSet Vector.dot 1e-4
+    let classifier x = if hyperPlane x >= 0. then 1 else -1
     let finish = DateTime.Now
     let testSetWithAnswers = Seq.map classifier (Seq.map (fun d -> d.Example) testSet) |> Seq.zip testSet
     let (precision, recall) =
@@ -96,4 +110,7 @@ let main argv =
         let (tp, fp, fn) = Seq.fold update (0, 0, 0) testSetWithAnswers
         ((float) tp / (float) (tp + fp), (float) tp / (float) (tp + fn))
     Console.WriteLine("time = {0}; precision = {1}; recall = {1}", (finish - start).TotalSeconds, precision, recall)
-    0 // 整数の終了コードを返します
+    {
+        Data = convertData dataSet
+        HyperPlane = convertHyperPlane hyperPlane
+    }

@@ -23,7 +23,10 @@ namespace Visualization
         private void ilPanel1_Load(object sender, EventArgs e)
         {
             var scene = new ILScene();
-            scene.Camera.Add(new ILSphere());
+            scene.Camera.Add(new ILPlotCube()
+            {
+                new ILContourLine
+            });
             ilPanel1.Scene = scene;
         }
     }
